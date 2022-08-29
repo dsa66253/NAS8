@@ -83,13 +83,10 @@ class InnerCell(nn.Module):
             #! Can NOT use inplace operation +=. WHY? 
             #! Ans: inplace operation make computational graphq fail
             if self.opDict[opName].getSwitch():
-                
                 if output==None:
-                    # print("forward ", self.innercellName, opName, self.opDict[opName].getAlpha().is_leaf, self.opDict[opName].getAlpha().grad)
-                    output = self.opDict[opName](input)
+                    output = self.opDict[opName](input) * self.opDict[opName].getAlpha()
                 else:
-                    # print("forward ", self.innercellName, opName, self.opDict[opName].getAlpha().is_leaf, self.opDict[opName].getAlpha().grad)
-                    output = output + self.opDict[opName](input)
+                    output = output + self.opDict[opName](input)* self.opDict[opName].getAlpha()
             
         return output
 class Layer(nn.Module):
@@ -103,14 +100,15 @@ class Layer(nn.Module):
         self.layerName = layerName
         self.alphasDict = {}
         self.alphasList = []
-        #info set inner cell
         
+        
+        #info define layer structure
         # print("cellArchPerLayer", cellArchPerLayer)
         self.innerCellDict = nn.ModuleDict({
             'innerCell_0': InnerCell(inputChannel, outputChannel//self.numOfInnerCell, stride, cellArchPerLayer[0], innercellName=self.layerName+".innerCell_0"),
             # 'innerCell_'+str(layer)+'_1': cell(inputChannel, outputChannel//self.numOfInnerCell, stride),
         })
-        
+        #info create alphaList 
         for innerCellName in self.innerCellDict:
             tmp = self.innerCellDict[innerCellName].getAlpha()
             self.alphasDict[innerCellName] = [ tmp ]
@@ -125,8 +123,8 @@ class Layer(nn.Module):
                 output = self.innerCellDict[name](input)
             else:
                 output = torch.cat( (output, self.innerCellDict[name](input)), dim=1 )
-
         return output
+    
     def getAlphas(self):
         return self.alphasList
 
@@ -142,7 +140,7 @@ class Model(nn.Module):
         self.currentEpoch = 0
         self.maskSaveDir = r'./saved_mask_per_epoch'
         self.alphasDict = {}
-        #info network structure
+        #info define network structure
         self.layerDict = nn.ModuleDict({})
         for i in range(len(featureMapDim)-1):
             for j in range(i+1, len(featureMapDim)):
@@ -169,14 +167,14 @@ class Model(nn.Module):
             if "layer" in k:
                 self.alphasDict[k] = self.layerDict[k].getAlphas()
 
-        self.initailizeAlphas()
+        self.__initailizeAlphas()
         # self.alphasMask = torch.full(self._alphas.shape, False, dtype=torch.bool) #* True means that element are masked(dropped)
         
         #* self.alphas can get the attribute
     def getAlphasDict(self):
         return self.alphasDict
 
-    def initailizeAlphas(self):
+    def __initailizeAlphas(self):
         #* set the first innercell's alpha to being evenly distributed, set second innercell's alphas to random
         for layerName in self.layerDict:
             for innerCellDict in self.layerDict[layerName].children():
@@ -257,7 +255,7 @@ class Model(nn.Module):
 
     def forward(self, input):
         #* every time use alphas need to set alphas to 0 which has been drop
-        self.normalizeAlphas()
+        # self.normalizeAlphas()
         #* create outputList
         
         outputList = [[0] * len(featureMapDim) for i in range(len(featureMapDim))]
@@ -280,7 +278,7 @@ class Model(nn.Module):
                 #* handle max pooling
                 output = self.maxPool(j, output)
                 outputList[i][j] = output
-                # print("i ", i, " j ",j , "output.shape", output.shape)
+                # print("layer_{}_{}".format(i, j), "output.shape", output.shape)
 
                 # for ii in range(len(featureMapDim)):
                 #     for jj in range(len(featureMapDim)):

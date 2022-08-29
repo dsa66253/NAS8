@@ -1,10 +1,21 @@
 import os
+import json
+# from re import S
+from os import listdir
 import numpy as np
-import torch.nn.functional as F
-import matplotlib.pyplot as plt
 from feature.make_dir import makeDir
+import sys
+from data.config import featureMap, PRIMITIVES, folder
 # this file just use to plot figure that shows alphas' variation during training
+def setStdoutToFile(filePath):
+    print("std output to ", filePath)
+    f = open(filePath, 'w')
+    sys.stdout = f
+    return f
 
+def setStdoutToDefault(f):
+    f.close()
+    sys.stdout = sys.__stdout__
 def tensor_to_list(input_op):
     return input_op.numpy().tolist()
 def pickSecondMax(input):
@@ -67,96 +78,57 @@ def manualAssign(kth):
     arch = np.reshape([4, 1, 0, 0, 0], (5, 1, 1))
     np.save(genotype_filename, arch)
     return arch
-    
-if __name__ == '__main__':
+def decodeInnerCell(allAlphas):
+    takeNumOfOp = 1
+    finalAlpha = allAlphas[-1] #* take the last epoch
 
-    for kth in range(3):
-        # print(decodeAlphas(kth))
-        print(manualAssign(kth))
-
+    sortAlphaIndex = np.argsort(finalAlpha) #* from least to largest
+    sortAlphaIndex = sortAlphaIndex[::-1] #* reverse ndarray
+    res = np.full_like(finalAlpha, 0, dtype=np.int32)
+    for i in range(takeNumOfOp):
+        res[sortAlphaIndex[i]] = 1
+    return res.tolist() #* make ndarray to list
+def decodeAllInnerCell(kth):
+    fileNameList = []
+    decodeDict = {}
+    #* split file according to different kth
+    for fileName in sorted(listdir(folder["alpha_pdart_nodrop"])):
         
+        if fileName.split("th")[0]==str(kth):
+            fileNameList.append(fileName)
+    for fileName in fileNameList:
+        #* load alpha npy file
+        filePath = os.path.join(folder["alpha_pdart_nodrop"], fileName)
+        allAlphas = np.load(filePath)
+        key = fileName.split(".")[0]
+        key = key.split("th_")[1]
+        decodeDict[key] = decodeInnerCell(allAlphas)
+        
+    print(json.dumps(decodeDict, indent=4)) #* make ndarray to list
+    return decodeDict
 
-exit()
-if __name__ == '__main__':
-    # 實驗三種不同的初始權重與照片批次順序
-    for i in range(3):
-        name_number = str(i)
-        print(f'i:{i}')
-        num_of_cell = 5  # cell個數
-        num_of_epoch = 45  # epoch總數
-        num_of_op = 5  # 每個cell中的操作個數
+if __name__ == '__main__': 
+    # filePath = "./decode/decode.json"
+    # setStdoutToFile(filePath)
+    # decodeAllInnerCell()
+    # f = open("./decode/0th_decode.json")
+    # # returns JSON object as 
+    # # a dictionary
+    # data = json.load(f)
+    # print(data)
+    # for key in data:
+    #     print(key, data[key])
+    # exit()
+    for kth in range(3):
+        filePath = "./decode/{}th_decode.json".format(kth)
+        f = setStdoutToFile(filePath)
+        
+        decodeAllInnerCell(kth)
+        
+        setStdoutToDefault(f)
+        # break
+    # for kth in range(3):
+        # print(decodeAlphas(kth))
+        # print(manualAssign(kth))
 
-        for cell in range(num_of_cell):
-            label = []
-            op1s = []
-            op2s = []
-            op3s = []
-            op4s = []
-            op5s = []
-
-            for num in range(3, num_of_epoch + 1, 2):
-                all_alpha_list = np.load(
-                    './alpha_pdart_nodrop/alpha_prob_' + str(name_number) + '_' + str(num) + '.npy')
-
-                op_list = []
-                # import pdb
-
-                # pdb.set_trace()
-                for i in range(num_of_op):
-                    op_list.append(all_alpha_list[cell][i])
-                # print(op_list)
-                # print(all_alpha_list)
-                label.append(str(num))
-
-                op1s.append(float('%.3f' % op_list[0]))
-                op2s.append(float('%.3f' % op_list[1]))
-                op3s.append(float('%.3f' % op_list[2]))
-                op4s.append(float('%.3f' % op_list[3]))
-                op5s.append(float('%.3f' % op_list[4]))
-
-                # 存最後一個epoch的alpha機率值
-                if (num == 45) & (cell == 0):
-                    #* todo max_alphas = np.argmax(all_alpha_list, -1)
-                    max_alphas = pickSecondMax(all_alpha_list)
-                    # print("all_alpha_list", all_alpha_list)
-                    # print("max_alphas", max_alphas)
-                    gene_cell = np.array([np.array([i, j]) for i, j in enumerate(max_alphas)])
-                    genotype_filename = os.path.join('./weights_pdarts_nodrop/',
-                                                    'genotype_' + str(name_number))
-                    # print("genotype_filename", genotype_filename)
-                    np.save(genotype_filename, gene_cell)
-                    # print('architecture search results:', network_path)
-                    print('new cell structure:\n', gene_cell)
-
-            x = np.arange(len(label))
-
-            # 劃出alpha機率值的機率分布圖的訓練過程，以長條圖呈現
-            width = 0.1
-            fig, ax = plt.subplots(figsize=(10, 8))
-            rects1 = ax.bar(x - 2 * width, op1s, width, label='3x3conv')
-            rects2 = ax.bar(x - 1 * width, op2s, width, label='5x5conv')
-            rects3 = ax.bar(x, op3s, width, label='7x7conv')
-            rects4 = ax.bar(x + 1 * width, op4s, width, label='9x9conv')
-            rects5 = ax.bar(x + 2 * width, op5s, width, label='11x11conv')
-
-            plt.p(0, 1, 8)
-            plt.legend(loc=2)
-            ax.set_ylabel('probability')
-            ax.set_xlabel('epoch')
-            ax.set_title('cell' + str(cell))
-            ax.set_xticks(x)
-            ax.set_xticklabels(label)
-            ax.legend()
-
-            def autolabel(rects):
-                for rect in rects:
-                    height = rect.get_height()
-                    # print(height)
-
-            autolabel(rects1)
-            autolabel(rects2)
-            autolabel(rects3)
-            autolabel(rects4)
-            autolabel(rects5)
-            fig.tight_layout()
-            plt.savefig('./weights_pdarts_nodrop/' + str(name_number) + '_cell_' + str(cell) + '.png')
+    exit()

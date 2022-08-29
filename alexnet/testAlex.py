@@ -11,7 +11,7 @@ from torch.autograd import Variable
 from torch.utils.data import Subset
 from torchvision import transforms, datasets
 from data.config import cfg_newnasmodel, cfg_alexnet, folder, cfg_nasmodel as cfg, testDataSetFolder
-from retrainModel import NewNasModel
+from models.retrainModel import NewNasModel
 from model import Model
 from models.alexnet import Baseline
 from feature.normalize import normalize

@@ -1,9 +1,13 @@
 from os import listdir
 from os.path import isfile, join
 import os
+import pstats
+from re import T
+import sys
 import torch
 from  models.mymodel import InnerCell, Layer, Model
-
+from  models.retrainModel import NewNasModel
+import json
 '''
 pick up 140 image from training set to test set
 '''
@@ -16,8 +20,38 @@ def moveFile(sourceDir, desDir, fileName):
     sourcePath = os.path.join(sourceDir, fileName)
     desPath = os.path.join(desDir, fileName)
     os.rename(sourcePath, desPath)
-if __name__=="__main__":
+def setStdoutToFile(filePath):
+    print("std output to ", filePath)
+    f = open(filePath, 'w')
+    sys.stdout = f
+    return f
 
+if __name__=="__main__":
+    print(torch.cuda.memory_allocated(device="cuda"))
+    l = []
+    for i in range(5):
+        tmp = torch.rand(100, 100).to("cuda")
+        # print(tmp.grad)
+        l.append(tmp)
+        print(torch.cuda.memory_allocated(device="cuda"))
+        tmp.requires_grad_(True)
+        print(torch.cuda.memory_allocated(device="cuda"))
+        print(tmp.grad)
+    # print(l)
+    exit()
+    setStdoutToFile("./tmp.txt")
+    f = open("./decode/0th_decode.json")
+    # returns JSON object as 
+    # a dictionary
+    data = json.load(f)
+    # print(data)
+    for key in data:
+        print(key, data[key])
+    model = NewNasModel(data)
+    print(model)
+    x = torch.rand(5, 3, 128, 128)
+    model(x)
+    exit()
 
     torch.manual_seed(10)
     input = torch.rand(3, 3, 128, 128)
