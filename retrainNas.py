@@ -31,6 +31,7 @@ from torchvision import transforms
 from  utility.DatasetReviewer import DatasetReviewer
 from utility.AccLossMonitor import AccLossMonitor
 import json 
+from utility.HistDrawer import HistDrawer
 # from train_nas_5cell import prepareDataloader
 stdoutTofile = True
 accelerateButUndetermine = cfg_newnasmodel["cuddbenchMark"]
@@ -352,10 +353,12 @@ if __name__ == '__main__':
         trainDataLoader, valDataLoader = prepareDataLoader(trainData, valData)
         criterion = prepareLossFunction()
         net = prepareModel(k)
+        histDrawer = HistDrawer(folder["pltSavedDir"])
+        histDrawer.drawNetConvWeight(net, tag="ori")
         model_optimizer = prepareOpt(net)
         
         last_epoch_val_ac, lossRecord, accRecord = myTrain(k, trainData, trainDataLoader, valDataLoader, net, model_optimizer, criterion, writer=None)  # 進入model訓練
-        
+        histDrawer.drawNetConvWeight(net, tag="trained")
         #info record training processs
         alMonitor = AccLossMonitor(k, folder["pltSavedDir"], folder["accLossDir"], trainType="retrain")
         alMonitor.plotAccLineChart(accRecord)

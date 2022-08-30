@@ -136,9 +136,7 @@ class Model(nn.Module):
         self.numOfOpPerCell = cfg["numOfOperations"]
         self.numOfLayer = cfg["numOfLayers"]
         self.numOfInnerCell = cfg["numOfInnerCell"]
-        self.alphasSaveDir = r'./alpha_pdart_nodrop'
         self.currentEpoch = 0
-        self.maskSaveDir = r'./saved_mask_per_epoch'
         self.alphasDict = {}
         #info define network structure
         self.layerDict = nn.ModuleDict({})
