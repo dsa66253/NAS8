@@ -82,8 +82,7 @@ class NewNasModel(nn.Module):
         self.layerDict = nn.ModuleDict({})
         for key in cellArch:
             [_, i, j] = key.split("_")
-            self.layerDict[key] = Layer(self.numOfInnerCell, 0, featureMap["f"+i]["channel"], featureMap["f"+j]["channel"], 4, cellArchPerLayer=cellArch[key], layerName=key)
-            if i==0:
+            if i=="0":
                 self.layerDict["layer_{}_{}".format(i, j)] = Layer(self.numOfInnerCell, 0, featureMap["f"+i]["channel"], featureMap["f"+j]["channel"], 4, cellArchPerLayer=cellArch[key], layerName=key)
             else:
                 self.layerDict["layer_{}_{}".format(i, j)] = Layer(self.numOfInnerCell, 0, featureMap["f"+i]["channel"], featureMap["f"+j]["channel"], 1, cellArchPerLayer=cellArch[key], layerName=key)
