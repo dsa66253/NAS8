@@ -15,19 +15,24 @@ class InnerCell(nn.Module):
     #todo make it general def __init__(self, inputChannel, outputChannel, stride, cellArchPerIneerCell, alphas)
     def __init__(self, inputChannel, outputChannel, stride, cellArchPerIneerCell, innercellName):
         super(InnerCell, self).__init__()
-        # trainslate index to key of operations
         self.transArchPerInnerCell= []
-        for index in range(len(PRIMITIVES)):
-            self.transArchPerInnerCell.append(PRIMITIVES[index])
         self.cellArchPerIneerCell = cellArchPerIneerCell
         self.innercellName = innercellName
+        self.beta =  nn.Parameter(torch.FloatTensor([0.1]))
+        
+        #info trainslate index to key of operations
+        for index in range(len(PRIMITIVES)):
+            self.transArchPerInnerCell.append(PRIMITIVES[index])
+
 
         #info make operations to a list according cellArchPerIneerCell
         self.opDict = nn.ModuleDict()
+        self.remainOpDict = nn.ModuleDict()
         self.alphasList = []
         for opName in self.transArchPerInnerCell:
             op = OPS[opName](inputChannel, outputChannel, stride, False, False)
             self.opDict[opName] = op
+            self.remainOpDict[opName] = op
             self.alphasList.append(op.getAlpha())
     def getOpDict(self):
         return self.opDict
@@ -74,20 +79,26 @@ class InnerCell(nn.Module):
                     output = output + self.opDict[opName](input)
             
         return output
+    def remakeRemainOp(self):
+        #info the function can actually be implemented in turnOffOp()
+        deleteNameList = []
+        for key in self.remainOpDict:
+            if not self.remainOpDict[key].getSwitch():
+                deleteNameList.append(key)
+        for i in range(len(deleteNameList)):
+            del self.remainOpDict[deleteNameList[i]]
     def forward(self, input):
         #info add each output of operation element-wise
         # print("next(model.parameters()).is_cuda", next(self.parameters()).is_cuda)
         # out = self.opList[0](input)
         output = None
-        for opName in self.opDict:
+        for opName in self.remainOpDict:
             #! Can NOT use inplace operation +=. WHY? 
             #! Ans: inplace operation make computational graphq fail
-            if self.opDict[opName].getSwitch():
-                if output==None:
-                    output = self.opDict[opName](input) * self.opDict[opName].getAlpha()
-                else:
-                    output = output + self.opDict[opName](input)* self.opDict[opName].getAlpha()
-            
+            if output==None:
+                output = self.remainOpDict[opName](input) * self.remainOpDict[opName].getAlpha()
+            else:
+                output = output + self.remainOpDict[opName](input)* self.remainOpDict[opName].getAlpha()
         return output
 class Layer(nn.Module):
     def __init__(self, numOfInnerCell, layer, inputChannel=3, outputChannel=96, stride=1, padding=1, cellArchPerLayer=None, layerName=""):
@@ -113,7 +124,9 @@ class Layer(nn.Module):
             tmp = self.innerCellDict[innerCellName].getAlpha()
             self.alphasDict[innerCellName] = [ tmp ]
             self.alphasList.append(tmp)
-
+    def remakeRemainOp(self):
+        for name in self.innerCellDict:
+            self.innerCellDict[name].remakeRemainOp()
     def forward(self, input):
         #* concate innerCell's output instead of add them elementwise
         output = None
@@ -164,8 +177,8 @@ class Model(nn.Module):
         for k in self.layerDict.keys():
             if "layer" in k:
                 self.alphasDict[k] = self.layerDict[k].getAlphas()
-
-        self.__initailizeAlphas()
+        #! why assign 0 as initial value make grad equal to 0
+        # self.__initailizeAlphas()
         # self.alphasMask = torch.full(self._alphas.shape, False, dtype=torch.bool) #* True means that element are masked(dropped)
         
         #* self.alphas can get the attribute
@@ -184,7 +197,9 @@ class Model(nn.Module):
             for innerCellDict in self.layerDict[layerName].children():
                 #* for each innercell
                 currentAlpha = torch.FloatTensor(innerCellDict["innerCell_0"].getAlpha())
-                (_, allMinIndex) = torch.topk( currentAlpha, len(PRIMITIVES), largest=False )
+                compareAlpha = torch.abs(currentAlpha)
+                (_, allMinIndex) = torch.topk( compareAlpha, len(PRIMITIVES), largest=False )
+                
                 print("allMinIndex", allMinIndex, _)                
                 #* drop operation
                 for alphaIndex in allMinIndex:
@@ -196,7 +211,8 @@ class Model(nn.Module):
                         break
                 print("after drop ", torch.FloatTensor(innerCellDict["innerCell_0"].getAlpha()))
                 print("grad ", torch.FloatTensor(innerCellDict["innerCell_0"].getAlpha()).grad)
-                
+                #* make drop operation not being call forward()
+                # self.layerDict[layerName].remakeRemainOp()
     
     
     def normalizeAlphas(self):
@@ -327,8 +343,8 @@ class Model(nn.Module):
                     if "alpha" in key:
                         print(k)
                         self.alphasParameters.append(para)
-                        print("grad ", para.grad)
-        print(self.alphasParameters)
+                        print("grad ", para.grad, para.item())
+        # print(self.alphasParameters)
         return self.alphasParameters
     def getAlphasTensor(self):
         #! why returning a set is correct
@@ -358,7 +374,10 @@ class Model(nn.Module):
 if __name__=="__main__":
     torch.manual_seed(10)
     innercell = InnerCell(3, 96, 1, None, "testLayer")
-    print(innercell)
+    opDict = innercell.getOpDict()
+    del opDict["conv_11x11"]
+    for k in opDict:
+        print(opDict[k])
     exit()
 
 

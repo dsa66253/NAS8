@@ -27,6 +27,12 @@ def setStdoutToFile(filePath):
     return f
 
 if __name__=="__main__":
+    currentAlpha = torch.FloatTensor([0.1, 0.2, 0.5, 0.4, -0.3])
+    currentAlpha = torch.abs(currentAlpha)
+    (_, allMinIndex) = torch.topk( currentAlpha, 5, largest=False )
+    print(_, allMinIndex, torch.abs(currentAlpha))
+    
+    exit()
     print(torch.cuda.memory_allocated(device="cuda"))
     l = []
     for i in range(5):

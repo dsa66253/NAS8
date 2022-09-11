@@ -45,7 +45,7 @@ class Conv(nn.Module):
     def getSwitch(self):
         return self.switch
     def __initialize_alphas(self):
-        self.alpha = nn.Parameter(torch.FloatTensor([3.14]))
+        self.alpha = nn.Parameter(torch.FloatTensor([0.2]))
         self.register_parameter( "alpha", self.alpha )
         
     def forward(self, x):

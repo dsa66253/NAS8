@@ -216,9 +216,10 @@ def myTrain(kth, trainData, train_loader, val_loader, net, model_optimizer, nas_
                 model_optimizer, nas_optimizer = prepareOpt(net)
             if epoch >= cfg['start_train_nas_epoch']:
                 # net.filtAlphas()
-                net.normalizeAlphas()
+                # net.normalizeAlphas()
                 # net.normalizeByDivideSum()
                 # net.saveMask(epoch, kth)
+                pass
             
             train_batch_iterator = iter(train_loader)
 
@@ -247,24 +248,8 @@ def myTrain(kth, trainData, train_loader, val_loader, net, model_optimizer, nas_
         #info calculate loss
         train_loss = criterion(train_outputs, train_labels)
         #info backward pass
-        # print("weightCount ", weightCount(net))
-        # print("gradCount ", gradCount(net))
-        # val = input("Enter ")
         train_loss.backward()
-        # val = input("Enter ")
 
-        # print("increase mem", torch.cuda.memory_allocated(device=device)-mem)
-        # print("weightCount ", weightCount(net))
-        # print("gradCount ", gradCount(net))
-
-        # print("epoch >= cfg['start_train_nas_epoch']", epoch >= cfg['start_train_nas_epoch'])
-        # print("(epoch - cfg['start_train_nas_epoch']) % 2 == 0", (epoch - cfg['start_train_nas_epoch']) % 2 == 0)
-        # print("epoch", epoch, "cfg['start_train_nas_epoch']", cfg['start_train_nas_epoch'])
-        # alphaMonitor.logAlphasGradPerIteration(net, iteration)
-
-        # train_transform_images = rotater(train_images)
-        # train_transform_outputs = net(train_transform_images)
-        # take turns to optimize weight and alphas
         #info update weight
         if epoch >= cfg['start_train_nas_epoch']:
             if (epoch - cfg['start_train_nas_epoch']) % 2 == 0:
