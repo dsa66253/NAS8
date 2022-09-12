@@ -101,7 +101,7 @@ cfg_newnasmodel = {
     'gpu_train': True,
     'batch_size': 64,
     'ngpu': 1,
-    'epoch': 50,
+    'epoch': 100,
     'decay1': 70,
     'decay2': 90,
     'image_size': 128,
