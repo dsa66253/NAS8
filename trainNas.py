@@ -371,7 +371,7 @@ def myTrain(kth, trainData, train_loader, val_loader, net, model_optimizer, nas_
             #     pass
                 # saveCheckPoint(kth, epoch, model_optimizer, net, lossRecord, accRecord)
         # transformImgTest.compare(net, train_images, predicts, train_labels, writer, iteration)
-        # if iteration>=50:
+        # if iteration>=5:
         #     break
 
 

@@ -8,6 +8,8 @@ import torch
 from  models.mymodel import InnerCell, Layer, Model
 from  models.retrainModel import NewNasModel
 import json
+from utility.HistDrawer import HistDrawer
+from models.arch import simpleArch
 '''
 pick up 140 image from training set to test set
 '''
@@ -27,10 +29,15 @@ def setStdoutToFile(filePath):
     return f
 
 if __name__=="__main__":
-    currentAlpha = torch.FloatTensor([0.1, 0.2, 0.5, 0.4, -0.3])
-    currentAlpha = torch.abs(currentAlpha)
-    (_, allMinIndex) = torch.topk( currentAlpha, 5, largest=False )
-    print(_, allMinIndex, torch.abs(currentAlpha))
+    histDrawer = HistDrawer("./")
+    # op = OPS["conv_5x5"](96, 128, 1, 1, 1)
+    net = Model()
+    
+    histDrawer.drawNetConvWeight(net)
+    # currentAlpha = torch.FloatTensor([0.1, 0.2, 0.5, 0.4, -0.3])
+    # currentAlpha = torch.abs(currentAlpha)
+    # (_, allMinIndex) = torch.topk( currentAlpha, 5, largest=False )
+    # print(_, allMinIndex, torch.abs(currentAlpha))
     
     exit()
     print(torch.cuda.memory_allocated(device="cuda"))

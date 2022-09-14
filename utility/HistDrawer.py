@@ -15,8 +15,10 @@ class HistDrawer():
         for k, v in net.named_modules():
             if isinstance(v, nn.Conv2d):
                 nameSplit = k.split(".")
-                fileName = tag + "." + nameSplit[1] + "." + nameSplit[-3] 
+                fileName = tag + "." + nameSplit[1] + "." + nameSplit[-3]
                 self.drawHist(v.weight, fileName, tag)
+                # print(fileName)
+
     def drawHist(self, tensor, fileName, tag=""):
         print(tensor.sum())
         fig, ax = plt.subplots(2, 1, figsize=(5, 2.7), layout='constrained')
@@ -46,8 +48,9 @@ class HistDrawer():
 if __name__=="__main__":
     histDrawer = HistDrawer("./")
     op = OPS["conv_5x5"](96, 128, 1, 1, 1)
-    # net = Model(simpleArch)
-    # histDrawer.drawNetConvWeight(net)
+    net = Model(simpleArch)
+    
+    histDrawer.drawNetConvWeight(net)
     # for k, v in op.named_modules():
     #     if isinstance(v, nn.Conv2d):
     #         print(k, v)
