@@ -10,11 +10,11 @@ def set_seed_cpu(seed):
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     
-    
-def initialize_weights(model):
+    #! here need to be related to kth 
+def initialize_weights(model, seed):
     for m in model.modules():
         if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
-            set_seed_cpu(20)
+            set_seed_cpu(seed)
             # torch.nn.init.kaiming_normal_(m.weight)
             # m.weight = torch.abs(m.weight)
             torch.nn.init.uniform_(m.weight, 0, 0.005)

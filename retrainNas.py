@@ -21,6 +21,7 @@ from feature.random_seed import set_seed_cpu
 from PIL import ImageFile
 from tqdm import tqdm
 from models.retrainModel import NewNasModel
+from models.initWeight import initialize_weights
 from alexnet.alexnet import Baseline
 from utility.alphasMonitor import AlphasMonitor
 from feature.utility import setStdoutToFile, setStdoutToDefault
@@ -104,6 +105,7 @@ def prepareModel(kth):
     net = net.to(device)
     print("net.cellArch:", net.cellArch)
     print("net", net)
+    initialize_weights(net, seed_img)
     return net
 def prepareOpt(net):
     return optim.SGD(net.parameters(), lr=initial_lr, momentum=momentum,
