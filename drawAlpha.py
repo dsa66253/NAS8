@@ -216,7 +216,6 @@ if __name__=="__main__":
     np.set_printoptions(precision=2)
     np.set_printoptions(suppress=True)
     plot_line_chart_all_file()
-    print()
     # for kth in range(3):
     #     plot_line_chart_all(kth)
 

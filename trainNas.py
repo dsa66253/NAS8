@@ -373,7 +373,8 @@ def myTrain(kth, trainData, train_loader, val_loader, net, model_optimizer, nas_
             #     pass
                 # saveCheckPoint(kth, epoch, model_optimizer, net, lossRecord, accRecord)
         # transformImgTest.compare(net, train_images, predicts, train_labels, writer, iteration)
-        # if iteration>=5:
+        # net.getAlphasPara()
+        # if iteration>=300:
         #     break
 
 
@@ -478,7 +479,7 @@ if __name__ == '__main__':
         writer.close()
         if stdoutTofile:
             setStdoutToDefault(f)
-        # exit() #* for examine why same initial value will get different trained model
+        # exit()/ #* for examine why same initial value will get different trained model
     print('train validate accuracy:', valList)
         
         
