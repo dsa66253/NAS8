@@ -29,8 +29,8 @@ def initialize_weights(model, seed):
     for m in model.modules():
         if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
             set_seed_cpu(seed)
-            exp2IniFunc[curExp](m.weight)
-            # torch.nn.init.kaiming_normal_(m.weight)
+            # exp2IniFunc[curExp](m.weight)
+            torch.nn.init.kaiming_normal_(m.weight)
             # m.weight = torch.abs(m.weight)
             # torch.nn.init.uniform_(m.weight, -0.005/2, 0.005/2)
             # m.weight.data.fill_(0)
@@ -40,8 +40,8 @@ def initialize_weights(model, seed):
                 torch.nn.init.constant_(m.bias, 1)
         elif isinstance(m, nn.Linear):
             set_seed_cpu(seed)
-            exp2IniFunc[curExp](m.weight)
-            # torch.nn.init.kaiming_normal_(m.weight)
+            # exp2IniFunc[curExp](m.weight)
+            torch.nn.init.kaiming_normal_(m.weight)
             # setTensorPositive(m.weight.data)
             # torch.nn.init.uniform_(m.weight, -0.005/2, 0.005/2)
             # m.weight.data.fill_(0)
