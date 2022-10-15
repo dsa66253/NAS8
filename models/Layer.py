@@ -4,6 +4,7 @@ from  .InnerCell import InnerCell
 
 class Layer(nn.Module):
     def __init__(self, numOfInnerCell, layer, inputChannel=3, outputChannel=96, stride=1, padding=1, cellArchPerLayer=None, layerName="", InnerCellArch=[1, 1, 1, 1, 1]):
+
         super(Layer, self).__init__()
         #info set private attribute
         self.numOfInnerCell = numOfInnerCell

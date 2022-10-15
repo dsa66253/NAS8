@@ -108,6 +108,7 @@ class InnerCell(nn.Module):
                 output = self.opDict[opName](input) * self.opDict[opName].getAlpha()
             else:
                 output = output + self.opDict[opName](input)* self.opDict[opName].getAlpha()
+
         output = output*self.beta
         #todo need to clarify responsibily of who need to multiply beta/alpha
         #todo it seems like all responsiblity is on InnerCell
