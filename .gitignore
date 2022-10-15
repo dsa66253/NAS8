@@ -19,3 +19,4 @@ tensorboard_retrain/
 tensorboard_trainNas/
 __pycache__
 decode/
+betaLog/

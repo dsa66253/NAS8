@@ -9,8 +9,8 @@ class InnerCell(nn.Module):
         self.transArchPerInnerCell= []
         self.cellArchPerIneerCell = cellArchPerIneerCell
         self.innercellName = innercellName
-        self.beta =  nn.Parameter(torch.FloatTensor([0.1]))
-        
+        self.beta =  nn.Parameter(torch.FloatTensor([1]))
+        self.innerCellSwitch = True
         #info trainslate index to key of operations
         for index in range(len(PRIMITIVES)):
             self.transArchPerInnerCell.append(PRIMITIVES[index])
@@ -25,6 +25,19 @@ class InnerCell(nn.Module):
             self.opDict[opName] = op
             self.remainOpDict[opName] = op
             self.alphasList.append(op.getAlpha())
+    def turnInnerCellSwitch(self, onOrOff):
+        if onOrOff==0 or onOrOff==False:
+            self.innerCellSwitch = False
+        else:
+            self.innerCellSwitch = True
+    def getInnerCellSwitch(self):
+        return self.innerCellSwitch
+    def getBeta(self):
+        return self.beta
+    def setBeta(self, inputBeta):
+        with torch.no_grad():
+            self.beta *= 0
+            self.beta += inputBeta
     def getOpDict(self):
         return self.opDict
     def getAlpha(self):
@@ -82,14 +95,19 @@ class InnerCell(nn.Module):
         #info add each output of operation element-wise
         # print("next(model.parameters()).is_cuda", next(self.parameters()).is_cuda)
         # out = self.opList[0](input)
+        
+            
         output = None
         for opName in self.remainOpDict:
             #! Can NOT use inplace operation +=. WHY? 
-            #! Ans: inplace operation make computational graphq fail
+            #! Ans: inplace operation make computational graph fail
             if output==None:
                 output = self.remainOpDict[opName](input) * self.remainOpDict[opName].getAlpha()
             else:
                 output = output + self.remainOpDict[opName](input)* self.remainOpDict[opName].getAlpha()
+        output = output*self.beta
+        #todo need to clarify responsibily of who need to multiply beta/alpha
+        #todo it seems like all responsiblity is on InnerCell
         return output
     
 if __name__=="__main__":

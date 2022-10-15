@@ -18,7 +18,6 @@ class AlphasMonitor():
             for layerName in alphaDict:
                 self.alphaLogDict[layerName] = np.append(self.alphaLogDict[layerName], torch.FloatTensor(alphaDict[layerName]).numpy(), axis=0)
 
-
     def logAlphasPerIteration(self, net, iteration):
         if iteration==0:
             tmp = net.getAlphasTensor()

@@ -5,11 +5,12 @@ import pstats
 from re import T
 import sys
 import torch
-from  models.mymodel import InnerCell, Layer, Model
+from  models.mymodel import Model
 from  models.retrainModel import NewNasModel
 import json
 from utility.HistDrawer import HistDrawer
 from models.arch import simpleArch
+from models.Layer import Layer
 '''
 pick up 140 image from training set to test set
 '''
@@ -29,6 +30,21 @@ def setStdoutToFile(filePath):
     return f
 
 if __name__=="__main__":
+    layer = Layer(1, 1, cellArchPerLayer=[[1, 1, 1, 1, 1]])
+    # print(layer.getAlphas())
+    # print(id(layer.getBeta()[0]))
+    # for k, v in layer.named_parameters():
+    #     print(k)
+    for k, v in layer.named_modules():
+        # print(k)
+        print(v)
+        break
+    print("==========================")
+    for k, v in layer.named_children():
+        print(k)
+        print(v)
+        break
+    exit()
     histDrawer = HistDrawer("./")
     # op = OPS["conv_5x5"](96, 128, 1, 1, 1)
     net = Model()
