@@ -142,8 +142,8 @@ def plot_line_chart_all_file():
 
     for fileName in sorted(listdir(folder["alpha_pdart_nodrop"])):
         #* load alpha npy file
-        fileNameList.append(os.path.join(folder["alpha_pdart_nodrop"], fileName))
         filePath = os.path.join(folder["alpha_pdart_nodrop"], fileName)
+        fileNameList.append(filePath)
         allAlphas = np.load(filePath)
         plot_line_chart_innercell(allAlphas, fileName=fileName.split(".")[0])
         # allAlphas = [[0.2, 0.2, 0.2, 0.2, 0.2]
@@ -210,12 +210,155 @@ def plot_line_chart_innercell(allAlphas, fileName=""):
     print("save to ", os.path.join(desFolder, fileName)+ '.png')
     plt.savefig(os.path.join(desFolder, fileName)+ '.png')
     plt.close()
+def getBetaDict():
+    #info load all beta files
+    fileNameList = []
+    for fileName in sorted(listdir(folder["betaLog"])):
+        if "beta." in fileName:
+            # beta's file name starts with beta.
+            fileNameList.append(fileName)
+    #info create betaDict for each layer per kth
+    betaDict = {}
+    for fileName in fileNameList:
+        #* load alpha npy file
+        filePath = os.path.join(folder["betaLog"], fileName)
+        # print("filePath", filePath)
+        beta = np.load(filePath)
+        layerName = fileName.split(".")[1] + "." + fileName.split(".")[2]
+        betaDict[layerName] = beta
+    return betaDict
+def plot_all_beta_line_chart():
+    betaDict = getBetaDict()
+    #info compare what all beta in one figure
+    for kth in range(3):
+        toPrintBetaDict = {}
+        for layerName in betaDict:
+            if str(kth)+"th" in layerName:
+                toPrintBetaDict[layerName] = betaDict[layerName]
+        plot_beta_line_chart(toPrintBetaDict, fileName="beta.{}th".format(str(kth)))
+        
+        
+def plot_beta_line_chart(toPrintBetaDict, fileName):
+    # toPrintBetaDict: print this dict in one file; key is label
+    # this figure will save as fileName
+    numOfLayer = len(toPrintBetaDict)
+    betaDict = {}
+    betaDict[fileName] = toPrintBetaDict
+    numOfIteration = 0
+    for layerName in toPrintBetaDict:
+        numOfIteration = len(toPrintBetaDict[layerName])
+    numOfRow = 3
+    numOfCol = 1
+    
+    x = np.arange(len(toPrintBetaDict))  # the label locations
+    totalTickRow = numOfIteration // numOfRow
+    totalEpochRow = numOfEpoch // numOfRow
+    iterPerEpoch = numOfIteration//numOfEpoch
+    # print("iterPerEpoch", iterPerEpoch)
+    fig, axs = plt.subplots(numOfRow, numOfCol, figsize=(20, 8), constrained_layout=True)
+    # print(np.linspace(0, 1, numOfLayer))
 
+    
+    for row in range(numOfRow):
+        cm = plt.get_cmap('gist_rainbow')
+        # axs[row].set_prop_cycle(color=[cm(1.*i/20) for i in range(20)])
+        for layerName in toPrintBetaDict:
 
+            splits = toPrintBetaDict[layerName][row*totalEpochRow*iterPerEpoch:(row+1)*totalEpochRow*iterPerEpoch]
+            axs[row].plot(splits, label=layerName)
+            #info set legend and label
+            axs[row].set_ylabel('beta value')
+            axs[row].set_title(fileName)
+            baseTick = row * numOfIteration//numOfRow
+            axs[row].set_xticks( range( 0, totalTickRow, iterPerEpoch) )
+            axs[row].set_xticklabels( np.array( range( baseTick, baseTick+totalTickRow, iterPerEpoch) )//iterPerEpoch )
+            axs[row].set_xticklabels( np.array( range( baseTick, baseTick+totalTickRow, iterPerEpoch) )//iterPerEpoch )
+            axs[row].set_xlabel('epoch')
+    axs[2].legend(loc='lower center', fancybox=True, shadow=True, ncol=5, bbox_to_anchor=(0.5, -0.75))
+    print("save to ", os.path.join(desFolder, fileName)+ '.png')
+    plt.savefig(os.path.join(desFolder, fileName)+ '.png')
+    plt.close()
+def plot_betaGrad_line_chart():
+    #info load all beta files
+    fileNameList = []
+    for fileName in sorted(listdir(folder["betaLog"])):
+        if "betaGrad." in fileName:
+            # beta's file name starts with beta.
+            fileNameList.append(fileName)
+    #info create betaDict for each layer per kth
+    betaGradDict = {}
+    for fileName in fileNameList:
+        #* load alpha npy file
+        filePath = os.path.join(folder["betaLog"], fileName)
+        # print("filePath", filePath)
+        beta = np.load(filePath)
+        layerName = fileName.split(".")[1] + "_" + fileName.split(".")[2]
+        betaGradDict[layerName] = beta
+    # for k in betaGradDict:
+    #     print(k, betaGradDict[k])
+    #     for i in range(len(betaGradDict[k])):
+            
+    #         if i>800 and i<1200:
+    #             print(i, betaGradDict[k][i])
+    for kth in range(3):
+        toPrintBetaDict = {}
+        for layerName in betaGradDict:
+            if str(kth)+"th" in layerName:
+                toPrintBetaDict[layerName] = betaGradDict[layerName]
+        for k in toPrintBetaDict:
+            print(k)
+        plot_beta_line_chart(toPrintBetaDict, fileName="betaGrad.{}th".format(str(kth)))
+def plot_beta_line_chart_by_same_dest():
+    betaDict = getBetaDict()
+    for kth in range(3):
+        #info get kth dict
+        kthBetaDict = {}
+        for layerName in betaDict:
+            if str(kth)+"th" in layerName:
+                kthBetaDict[layerName] = betaDict[layerName]
+        # print("dest layer: ", desLayerIndex)
+        # print("======================")
+        # for k in kthBetaDict:
+        #     print(k)
+        #info get toPrintDict by destination layer
+        for desLayerIndex in range(1, 6):
+            toPrintDict = {}
+            for layerName in kthBetaDict:
+                if layerName.split("_")[-1] == str(desLayerIndex):
+                    toPrintDict[layerName] = kthBetaDict[layerName]
+                
+            for k in toPrintDict:
+                plot_beta_line_chart(toPrintDict, fileName="{}th.betaByDest{}".format(str(kth), str(desLayerIndex)))
+                
+                
 if __name__=="__main__":
     np.set_printoptions(precision=2)
     np.set_printoptions(suppress=True)
-    plot_line_chart_all_file()
+    plot_beta_line_chart_by_same_dest()
+    # plot_line_chart_all_file()
+    # plot_betaGrad_line_chart()
+    # plot_all_beta_line_chart()
+    # x = np.linspace(0, 1, 10)
+    # fig, ax = plt.subplots()
+    # ax.set_prop_cycle(color=['red', 'green', 'blue'])
+    # for i in range(1, 6):
+    #     plt.plot(x, i * x + i, label='$y = {i}x + {i}$'.format(i=i))
+    # plt.legend(loc='best')
+
+    # fig.savefig('./moreColors.png')
+    # plt.savefig(os.path.join(desFolder, fileName)+ '.png')
+    # plt.close()
+    # NUM_COLORS = 20
+
+    # cm = plt.get_cmap('gist_rainbow')
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111)
+    # ax.set_prop_cycle(color=[cm(1.*i/NUM_COLORS) for i in range(NUM_COLORS)])
+    # for i in range(NUM_COLORS):
+    #     ax.plot(np.arange(10)*(i+1))
+
+    # fig.savefig('moreColors.png')
+
     # for kth in range(3):
     #     plot_line_chart_all(kth)
 

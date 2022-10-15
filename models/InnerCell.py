@@ -4,27 +4,43 @@ from data.config import PRIMITIVES
 from .myoperation import OPS
 class InnerCell(nn.Module):
     #todo make it general def __init__(self, inputChannel, outputChannel, stride, cellArchPerIneerCell, alphas)
-    def __init__(self, inputChannel, outputChannel, stride, cellArchPerIneerCell, innercellName):
+    #todo due to adding opIndex parameter, mymodel.py needs to be adjust
+    def __init__(self, inputChannel, outputChannel, stride, cellArchPerIneerCell, innercellName, opIndex=[]):
+        
         super(InnerCell, self).__init__()
         self.transArchPerInnerCell= []
         self.cellArchPerIneerCell = cellArchPerIneerCell
         self.innercellName = innercellName
-        self.beta =  nn.Parameter(torch.FloatTensor([0.1]))
-        
+        self.beta =  nn.Parameter(torch.FloatTensor([1]))
+        self.innerCellSwitch = True
         #info trainslate index to key of operations
-        for index in range(len(PRIMITIVES)):
-            self.transArchPerInnerCell.append(PRIMITIVES[index])
+        for index in range(len(opIndex)):
+            if opIndex[index]==1:
+                self.transArchPerInnerCell.append(PRIMITIVES[opIndex[index]])
 
 
         #info make operations to a list according cellArchPerIneerCell
         self.opDict = nn.ModuleDict()
-        self.remainOpDict = nn.ModuleDict()
+        # self.remainOpDict = nn.ModuleDict()
         self.alphasList = []
         for opName in self.transArchPerInnerCell:
             op = OPS[opName](inputChannel, outputChannel, stride, False, False)
             self.opDict[opName] = op
-            self.remainOpDict[opName] = op
+            # self.remainOpDict[opName] = op
             self.alphasList.append(op.getAlpha())
+    def turnInnerCellSwitch(self, onOrOff):
+        if onOrOff==0 or onOrOff==False:
+            self.innerCellSwitch = False
+        else:
+            self.innerCellSwitch = True
+    def getInnerCellSwitch(self):
+        return self.innerCellSwitch
+    def getBeta(self):
+        return self.beta
+    def setBeta(self, inputBeta):
+        with torch.no_grad():
+            self.beta *= 0
+            self.beta += inputBeta
     def getOpDict(self):
         return self.opDict
     def getAlpha(self):
@@ -82,14 +98,19 @@ class InnerCell(nn.Module):
         #info add each output of operation element-wise
         # print("next(model.parameters()).is_cuda", next(self.parameters()).is_cuda)
         # out = self.opList[0](input)
+        
+            
         output = None
-        for opName in self.remainOpDict:
+        for opName in self.opDict:
             #! Can NOT use inplace operation +=. WHY? 
-            #! Ans: inplace operation make computational graphq fail
+            #! Ans: inplace operation make computational graph fail
             if output==None:
-                output = self.remainOpDict[opName](input) * self.remainOpDict[opName].getAlpha()
+                output = self.opDict[opName](input) * self.opDict[opName].getAlpha()
             else:
-                output = output + self.remainOpDict[opName](input)* self.remainOpDict[opName].getAlpha()
+                output = output + self.opDict[opName](input)* self.opDict[opName].getAlpha()
+        output = output*self.beta
+        #todo need to clarify responsibily of who need to multiply beta/alpha
+        #todo it seems like all responsiblity is on InnerCell
         return output
     
 if __name__=="__main__":

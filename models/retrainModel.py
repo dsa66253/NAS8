@@ -7,65 +7,9 @@ from data.config import PRIMITIVES, featureMap
 import numpy as np
 from models.initWeight import initialize_weights
 import random
+from .Layer import Layer
+from .InnerCell import InnerCell
 
-class InnerCell(nn.Module):
-    #todo make it general def __init__(self, inputChannel, outputChannel, stride, cellArchPerIneerCell, alphas)
-    def __init__(self, inputChannel, outputChannel, stride, cellArchPerIneerCell, innercellName):
-        super(InnerCell, self).__init__()
-        #info private data
-        self.cellArchPerIneerCell = cellArchPerIneerCell
-        self.innercellName = innercellName
-        
-        #info make operations to a list according cellArchPerIneerCell
-        self.opDict = nn.ModuleDict()
-        for opIndex in range(len(self.cellArchPerIneerCell)):
-            if self.cellArchPerIneerCell[opIndex]==1:
-                op = OPS[PRIMITIVES[opIndex]](inputChannel, outputChannel, stride, False, False)
-                # op.setAlpha(1) #* don't need to train alpha
-                self.opDict[PRIMITIVES[opIndex]] = op
-                
-    def forward(self, input):
-        #info add each output of operation element-wise
-        output = None
-        for opName in self.opDict:
-            #! Can NOT use inplace operation +=. WHY? 
-            #! Ans: inplace operation make computational graphq fail
-            if self.opDict[opName].getSwitch():
-                if output==None:
-                    output = self.opDict[opName](input) * self.opDict[opName].getAlpha()
-                else:
-                    output = output + self.opDict[opName](input)* self.opDict[opName].getAlpha()
-        return output
-    
-class Layer(nn.Module):
-    def __init__(self, numOfInnerCell, layer, inputChannel=3, outputChannel=96, stride=1, padding=1, cellArchPerLayer=None, layerName=""):
-        super(Layer, self).__init__()
-        #info set private attribute
-        self.numOfInnerCell = numOfInnerCell
-        self.layer = layer
-        self.inputChannel = inputChannel
-        self.outputChannel = outputChannel
-        self.layerName = layerName
-        
-        #info define layer structure
-        # print("cellArchPerLayer", cellArchPerLayer)
-        self.innerCellDict = nn.ModuleDict({
-            'innerCell_0': InnerCell(inputChannel, outputChannel//self.numOfInnerCell, stride, cellArchPerLayer, innercellName=self.layerName+".innerCell_0"),
-            # 'innerCell_'+str(layer)+'_1': cell(inputChannel, outputChannel//self.numOfInnerCell, stride),
-        })
-        
-
-    def forward(self, input):
-        #* concate innerCell's output instead of add them elementwise
-        output = None
-        for name in self.innerCellDict:
-            # add each inner cell directly without alphas involved
-            if output == None:
-                output = self.innerCellDict[name](input)
-            else:
-                output = torch.cat( (output, self.innerCellDict[name](input)), dim=1 )
-        return output
-    
 class NewNasModel(nn.Module):
     def __init__(self, cellArch):
         super(NewNasModel, self).__init__()
@@ -77,15 +21,17 @@ class NewNasModel(nn.Module):
         self.cellArch = cellArch
         self.alphasDict = {}
         # self.cellArchTrans = self.translateCellArch()
-        
+        # print("self.cellArch", self.cellArch)
         #info define network structure
         self.layerDict = nn.ModuleDict({})
         for key in cellArch:
             [_, i, j] = key.split("_")
             if i=="0":
-                self.layerDict["layer_{}_{}".format(i, j)] = Layer(self.numOfInnerCell, 0, featureMap["f"+i]["channel"], featureMap["f"+j]["channel"], 4, cellArchPerLayer=cellArch[key], layerName=key)
+                if sum(cellArch[key])>0:
+                    self.layerDict["layer_{}_{}".format(i, j)] = Layer(self.numOfInnerCell, 0, featureMap["f"+i]["channel"], featureMap["f"+j]["channel"], 4, cellArchPerLayer=cellArch[key], layerName=key, InnerCellArch=cellArch[key])
             else:
-                self.layerDict["layer_{}_{}".format(i, j)] = Layer(self.numOfInnerCell, 0, featureMap["f"+i]["channel"], featureMap["f"+j]["channel"], 1, cellArchPerLayer=cellArch[key], layerName=key)
+                if sum(cellArch[key])>0:
+                    self.layerDict["layer_{}_{}".format(i, j)] = Layer(self.numOfInnerCell, 0, featureMap["f"+i]["channel"], featureMap["f"+j]["channel"], 1, cellArchPerLayer=cellArch[key], layerName=key, InnerCellArch=cellArch[key])
         
         self.poolDict = nn.ModuleDict({})
         for i in range(3):
@@ -102,37 +48,45 @@ class NewNasModel(nn.Module):
         )
         
     def forward(self, input):
-        #* create outputList
-        # print("input;shape", input.shape)
-        outputList = [[0] * len(featureMap) for i in range(len(featureMap))]
-        featureMapList = [0]*len(featureMap)
-        featureMapList[0] = input
+        output=None
+        for layerName in self.layerDict:
+            if output==None:
+                output = self.layerDict[layerName](input)
+            else:
+                output = self.layerDict[layerName](output)
+            output = self.maxPool(layerName[-1], output)
+        
+        # #* create outputList
+        # # print("input;shape", input.shape)
+        # outputList = [[0] * len(featureMap) for i in range(len(featureMap))]
+        # featureMapList = [0]*len(featureMap)
+        # featureMapList[0] = input
 
-        for i in range(len(featureMap)-1):
-            for j in range(i+1, len(featureMap)):
-                #* feed Fi feature map to layer
-                # print("featureMapList[i]", featureMapList[i].shape)
-                output = self.layerDict["layer_{}_{}".format(i, j)](featureMapList[i])
+        # for i in range(len(featureMap)-1):
+        #     for j in range(i+1, len(featureMap)):
+        #         #* feed Fi feature map to layer
+        #         # print("featureMapList[i]", featureMapList[i].shape)
+        #         output = self.layerDict["layer_{}_{}".format(i, j)](featureMapList[i])
 
-                #* handle max pooling
-                output = self.maxPool(j, output)
-                outputList[i][j] = output
-                # print("layer_{}_{}".format(i, j), "output.shape", output.shape)
-            #* prepare the next feature map
-            preOutput = None
-            for nextFeatureMap in range(i+1): 
-                if preOutput==None:
-                    preOutput = outputList[nextFeatureMap][i+1]
-                else:
-                    try:
-                        preOutput = preOutput + outputList[nextFeatureMap][i+1]
-                    except:
-                        print("unmatch dim on ", nextFeatureMap)
-                        print(preOutput.shape, outputList[nextFeatureMap][i+1].shape)
-                        exit()
+        #         #* handle max pooling
+        #         output = self.maxPool(j, output)
+        #         outputList[i][j] = output
+        #         # print("layer_{}_{}".format(i, j), "output.shape", output.shape)
+        #     #* prepare the next feature map
+        #     preOutput = None
+        #     for nextFeatureMap in range(i+1): 
+        #         if preOutput==None:
+        #             preOutput = outputList[nextFeatureMap][i+1]
+        #         else:
+        #             try:
+        #                 preOutput = preOutput + outputList[nextFeatureMap][i+1]
+        #             except:
+        #                 print("unmatch dim on ", nextFeatureMap)
+        #                 print(preOutput.shape, outputList[nextFeatureMap][i+1].shape)
+        #                 exit()
 
-            featureMapList[i+1] = preOutput
-        output = featureMapList[-1]
+        #     featureMapList[i+1] = preOutput
+        # output = featureMapList[-1]
         #info to fc layer
         output = torch.flatten(output, start_dim=1)
         output = self.fc(output)

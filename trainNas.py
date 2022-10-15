@@ -31,6 +31,7 @@ from utility.DatasetHandler import DatasetHandler
 from torchvision import transforms
 from  utility.DatasetReviewer import DatasetReviewer
 from utility.AccLossMonitor import AccLossMonitor
+from utility.BetaMonitor import BetaMonitor
 from models.initWeight import initialize_weights
 stdoutTofile = True
 accelerateButUndetermine = False
@@ -104,7 +105,8 @@ def prepareOpt(net):
         model_optimizer = optim.SGD(net.getWeight(), lr=initial_lr, momentum=momentum,
                                     weight_decay=weight_decay)
         nas_optimizer = optim.Adam(net.getAlphasPara(), lr=nas_initial_lr, weight_decay=weight_decay)
-        return model_optimizer, nas_optimizer
+        beta_optimizer = optim.Adam(net.getBetaPara(), lr=nas_initial_lr, weight_decay=weight_decay)
+        return model_optimizer, nas_optimizer, beta_optimizer
     
 def printNetWeight(net):
     for name, para in net.named_parameters():
@@ -174,7 +176,7 @@ def gradCount(net):
     return count
         
         
-def myTrain(kth, trainData, train_loader, val_loader, net, model_optimizer, nas_optimizer, criterion, writer):
+def myTrain(kth, trainData, train_loader, val_loader, net, model_optimizer, nas_optimizer, criterion, writer, beta_optimizer):
     
     # calculate how many iterations
     epoch_size = math.ceil(len(trainData) / batch_size)#* It should be number of batch per epoch
@@ -194,6 +196,7 @@ def myTrain(kth, trainData, train_loader, val_loader, net, model_optimizer, nas_
     record_val_acc = np.array([])
     record_test_acc = np.array([])
     alphaMonitor = AlphasMonitor()
+    betaMonitor = BetaMonitor()
     
     print("minibatch size: ", epoch_size)
     #info start training loop
@@ -215,8 +218,11 @@ def myTrain(kth, trainData, train_loader, val_loader, net, model_optimizer, nas_
             if epoch in epoch_to_drop:
                 # pass
                 net.dropMinAlpha()
-                model_optimizer, nas_optimizer = prepareOpt(net)
+                # net.dropMinBeta()
+                model_optimizer, nas_optimizer, beta_optimizer = prepareOpt(net)
             if epoch >= cfg['start_train_nas_epoch']:
+                # if net.dropBeta():
+                #     model_optimizer, nas_optimizer, beta_optimizer = prepareOpt(net)
                 # net.filtAlphas()
                 # net.normalizeAlphas()
                 # net.normalizeByDivideSum()
@@ -243,19 +249,23 @@ def myTrain(kth, trainData, train_loader, val_loader, net, model_optimizer, nas_
 
         model_optimizer.zero_grad(set_to_none=True)
         nas_optimizer.zero_grad(set_to_none=True)
+        beta_optimizer.zero_grad(set_to_none=True)
         
         alphaMonitor.logAlphaDictPerIter(net, iteration)
+        betaMonitor.logBetaDictPerIter(net, iteration)
+        
         #info Forward pass
         train_outputs = net(train_images)
         #info calculate loss
         train_loss = criterion(train_outputs, train_labels)
         #info backward pass
         train_loss.backward()
-
+        betaMonitor.logBetaGradDictPerIter(net, iteration, epoch)
         #info update weight
         if epoch >= cfg['start_train_nas_epoch']:
             if (epoch - cfg['start_train_nas_epoch']) % 2 == 0:
                 nas_optimizer.step()
+                beta_optimizer.step()
             else:
                 model_optimizer.step()
         else:
@@ -383,7 +393,9 @@ def myTrain(kth, trainData, train_loader, val_loader, net, model_optimizer, nas_
 
 
     alphaMonitor.saveAllAlphas(kth)
-    alphaMonitor.saveAllAlphasGrad(kth)
+    # alphaMonitor.saveAllAlphasGrad(kth) #! a bug didn't be solved
+    betaMonitor.saveAllBeta(kth)
+    betaMonitor.saveAllBetaGrad(kth)
     torch.save(net.state_dict(), os.path.join(folder["savedCheckPoint"], cfg['name'] + str(kth) + '_Final.pt'))
     
     
@@ -459,8 +471,8 @@ if __name__ == '__main__':
         criterion = prepareLossFunction()
         net = prepareModel()
 
-        model_optimizer, nas_optimizer = prepareOpt(net)
-        last_epoch_val_ac, lossRecord, accRecord  = myTrain(k, trainData, trainDataLoader, valDataLoader, net, model_optimizer, nas_optimizer, criterion, writer)  # 進入model訓練
+        model_optimizer, nas_optimizer, beta_optimizer = prepareOpt(net)
+        last_epoch_val_ac, lossRecord, accRecord  = myTrain(k, trainData, trainDataLoader, valDataLoader, net, model_optimizer, nas_optimizer, criterion, writer, beta_optimizer)  # 進入model訓練
         #info record training processs
         alMonitor = AccLossMonitor(k, folder["pltSavedDir"], folder["accLossDir"], trainType="Nas")
         alMonitor.plotAccLineChart(accRecord)
