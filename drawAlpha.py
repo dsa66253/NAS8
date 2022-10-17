@@ -323,12 +323,12 @@ def plot_beta_line_chart_by_same_dest():
         #info get toPrintDict by destination layer
         for desLayerIndex in range(1, 6):
             toPrintDict = {}
+            
             for layerName in kthBetaDict:
                 if layerName.split("_")[-1] == str(desLayerIndex):
                     toPrintDict[layerName] = kthBetaDict[layerName]
-                
-            for k in toPrintDict:
-                plot_beta_line_chart(toPrintDict, fileName="{}th.betaByDest{}".format(str(kth), str(desLayerIndex)))
+            # for k in toPrintDict:
+            plot_beta_line_chart(toPrintDict, fileName="{}th.betaByDest{}".format(str(kth), str(desLayerIndex)))
                 
                 
 if __name__=="__main__":

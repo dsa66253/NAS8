@@ -281,6 +281,7 @@ def myTrain(kth, trainData, trainDataLoader, valDataLoader, net, model_optimizer
             #info test set
             print("start test epoch", epoch)
             testAcc = testC.test(net)
+            print("test Acc", testAcc)
             record_test_acc = np.append(record_test_acc, testAcc)
             #info record acc an loss
             # writer.add_scalar('Train_Loss/k='+str(kth), train_loss.item(), epoch)
@@ -293,7 +294,7 @@ def myTrain(kth, trainData, trainDataLoader, valDataLoader, net, model_optimizer
         #     break
 
     lossRecord = {"train": record_train_loss, "val": record_val_loss}
-    accRecord = {"train": record_train_acc, "val": record_val_acc}
+    accRecord = {"train": record_train_acc, "val": record_val_acc, "test":record_test_acc}
     print("start test model before save model")
     testAcc = testC.test(net)
     testC.printAllModule(net)
@@ -359,11 +360,11 @@ if __name__ == '__main__':
         criterion = prepareLossFunction()
         net = prepareModel(k)
         histDrawer = HistDrawer(folder["pltSavedDir"])
-        # histDrawer.drawNetConvWeight(net, tag="ori_{}".format(str(k)))
+        histDrawer.drawNetConvWeight(net, tag="ori_{}".format(str(k)))
         model_optimizer = prepareOpt(net)
         
         last_epoch_val_ac, lossRecord, accRecord = myTrain(k, trainData, trainDataLoader, valDataLoader, net, model_optimizer, criterion, writer=None)  # 進入model訓練
-        # histDrawer.drawNetConvWeight(net, tag="trained_{}".format(str(k)))
+        histDrawer.drawNetConvWeight(net, tag="trained_{}".format(str(k)))
         #info record training processs
         alMonitor = AccLossMonitor(k, folder["pltSavedDir"], folder["accLossDir"], trainType="retrain")
         alMonitor.plotAccLineChart(accRecord)

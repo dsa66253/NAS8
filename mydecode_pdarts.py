@@ -1,12 +1,19 @@
 import os
 import json
-# from re import S
+from data.config import emptyArch
 from os import listdir
 import numpy as np
 from feature.make_dir import makeDir
 import sys
 from data.config import featureMap, PRIMITIVES, folder
+import copy
 # this file just use to plot figure that shows alphas' variation during training
+def printToDecodeFile(decodeJson, kth):
+    filePath = "./decode/{}th_decode.json".format(str(kth))
+    f = setStdoutToFile(filePath)
+    print(json.dumps(decodeJson, indent=4))
+    setStdoutToDefault(f)
+    
 def setStdoutToFile(filePath):
     print("std output to ", filePath)
     f = open(filePath, 'w')
@@ -16,8 +23,7 @@ def setStdoutToFile(filePath):
 def setStdoutToDefault(f):
     f.close()
     sys.stdout = sys.__stdout__
-def tensor_to_list(input_op):
-    return input_op.numpy().tolist()
+    
 def pickSecondMax(input):
     # set the max to zero to and find the max again 
     # to get the index of second large value of original input
@@ -78,7 +84,7 @@ def manualAssign(kth):
     arch = np.reshape([4, 1, 0, 0, 0], (5, 1, 1))
     np.save(genotype_filename, arch)
     return arch
-def decodeInnerCell(allAlphas):
+def decodeOperation(allAlphas):
     takeNumOfOp = 1
     finalAlpha = allAlphas[-1] #* take the last epoch
 
@@ -88,25 +94,87 @@ def decodeInnerCell(allAlphas):
     for i in range(takeNumOfOp):
         res[sortAlphaIndex[i]] = 1
     return res.tolist() #* make ndarray to list
-def decodeAllInnerCell(kth):
+def decodeAllOperation(kth, pickedLayerList=None):
     fileNameList = []
     decodeDict = {}
-    #* split file according to different kth
-    for fileName in sorted(listdir(folder["alpha_pdart_nodrop"])):
-        
-        if fileName.split("th")[0]==str(kth):
-            fileNameList.append(fileName)
-    for fileName in fileNameList:
-        #* load alpha npy file
-        filePath = os.path.join(folder["alpha_pdart_nodrop"], fileName)
-        allAlphas = np.load(filePath)
-        key = fileName.split(".")[0]
-        key = key.split("th_")[1]
-        decodeDict[key] = decodeInnerCell(allAlphas)
-        
-    print(json.dumps(decodeDict, indent=4)) #* make ndarray to list
-    return decodeDict
 
+    #info decode operations of all layer
+    if pickedLayerList==None:
+        #* split file according to different kth
+        for fileName in sorted(listdir(folder["alpha_pdart_nodrop"])):
+            if fileName.split("th")[0]==str(kth):
+                fileNameList.append(fileName)
+        for fileName in fileNameList:
+            #* load alpha npy file
+            filePath = os.path.join(folder["alpha_pdart_nodrop"], fileName)
+            allAlphas = np.load(filePath)
+            key = fileName.split(".")[0]
+            key = key.split("th_")[1] # eg:layer0_1
+            decodeDict[key] = decodeOperation(allAlphas)
+    else:
+        #info create fileNameList based on decode Layer
+        for fileName in sorted(listdir(folder["alpha_pdart_nodrop"])):
+            for pickedLayerName in pickedLayerList:
+                if (fileName.split("th")[0]==str(kth)) and (pickedLayerName in fileName):
+                    fileNameList.append(fileName)
+        
+        for fileName in fileNameList:
+            #* load alpha npy file
+            filePath = os.path.join(folder["alpha_pdart_nodrop"], fileName)
+            alphaPerLayer = np.load(filePath)
+            key = fileName.split(".")[0]
+            key = key.split("th_")[1] # eg:layer0_1
+            decodeDict[key] = decodeOperation(alphaPerLayer)
+        
+        #info create complete decode Dict
+        toSaveDict = copy.deepcopy(emptyArch) # it need to be deep copied
+        for layerName in decodeDict:
+            toSaveDict[layerName] = decodeDict[layerName]
+        # print("toSaveDict", toSaveDict)
+
+    return toSaveDict
+
+def getCompareLayerList(fileNameList, basedLayerNo):
+    compareLayerList = []
+    for fileName in fileNameList:
+        if "_{}.npy".format(str(basedLayerNo)) in fileName:
+            compareLayerList.append(fileName)
+    return compareLayerList
+def decodeLayer(compareLayerList):
+    finalBetaDict = {}
+    #info get last beta in compareLayerList and make it a finalBetaDict
+    for fileName in compareLayerList:
+        filePath = os.path.join(folder["betaLog"], fileName)
+        layerName = filePath.split(".")[-2]
+        finalBetaDict[layerName] = np.load(filePath)[-1]
+    #info find largest beta in each finalBetaDict
+    sort_orders = sorted(finalBetaDict.items(), key=lambda x: x[1], reverse=True) #*sort dict by value
+    return [sort_orders[0][0]]
+
+    
+# todo topological sort to decode beta
+def decodeAllLayer(kth):
+    fileNameList = []
+    
+    #info split file according to different kth
+    for fileName in sorted(listdir(folder["betaLog"])):
+        if str(kth)+"th" in fileName:
+            fileNameList.append(fileName)
+    #info back trace
+    startFromLayer = 5
+    pickerLayerList = []
+    for i in range(startFromLayer, -1, -1):
+        # print("startFromLayer", startFromLayer)
+        compareLayerList = getCompareLayerList(fileNameList, startFromLayer)
+        pickedLayerList = decodeLayer(compareLayerList)
+        toLayerNo = pickedLayerList[0].split("_")[-2]
+        startFromLayer = toLayerNo
+        pickerLayerList.append(pickedLayerList[0])
+        if toLayerNo=="0":
+            #info reach First layer
+            break
+    return pickerLayerList
+            
 if __name__ == '__main__': 
     # filePath = "./decode/decode.json"
     # setStdoutToFile(filePath)
@@ -119,13 +187,11 @@ if __name__ == '__main__':
     # for key in data:
     #     print(key, data[key])
     # exit()
-    for kth in range(3):
-        filePath = "./decode/{}th_decode.json".format(kth)
-        f = setStdoutToFile(filePath)
-        
-        decodeAllInnerCell(kth)
-        
-        setStdoutToDefault(f)
+    for kth in range(0, 3):
+        pickerLayerList = decodeAllLayer(kth)
+        print("pickerLayerList", pickerLayerList)
+        toSaveDict = decodeAllOperation(kth, pickerLayerList)
+        printToDecodeFile(toSaveDict, kth)
         # break
     # for kth in range(3):
         # print(decodeAlphas(kth))

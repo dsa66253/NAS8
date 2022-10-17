@@ -99,9 +99,9 @@ cfg_newnasmodel = {
     'clip': False,
     'loc_weight': 1.0,
     'gpu_train': True,
-    'batch_size': 256,
+    'batch_size': 128,
     'ngpu': 1,
-    'epoch': 5,
+    'epoch': 80,
     'decay1': 70,
     'decay2': 90,
     'image_size': 128,
@@ -159,3 +159,20 @@ PRIMITIVES_skip = [
     'conv_11x11',
     'skip_connect'
 ]
+emptyArch = {
+    "layer_0_1": [0, 0, 0, 0, 0],
+    "layer_0_2": [0, 0, 0, 0, 0],
+    "layer_0_3": [0, 0, 0, 0, 0],
+    "layer_0_4": [0, 0, 0, 0, 0],
+    "layer_0_5": [0, 0, 0, 0, 0],
+    "layer_1_2": [0, 0, 0, 0, 0],
+    "layer_1_3": [0, 0, 0, 0, 0],
+    "layer_1_4": [0, 0, 0, 0, 0],
+    "layer_1_5": [0, 0, 0, 0, 0],
+    "layer_2_3": [0, 0, 0, 0, 0],
+    "layer_2_4": [0, 0, 0, 0, 0],
+    "layer_2_5": [0, 0, 0, 0, 0],
+    "layer_3_4": [0, 0, 0, 0, 0],
+    "layer_3_5": [0, 0, 0, 0, 0],
+    "layer_4_5": [0, 0, 0, 0, 0]
+}
