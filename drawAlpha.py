@@ -335,7 +335,7 @@ if __name__=="__main__":
     np.set_printoptions(precision=2)
     np.set_printoptions(suppress=True)
     plot_beta_line_chart_by_same_dest()
-    # plot_line_chart_all_file()
+    plot_line_chart_all_file()
     # plot_betaGrad_line_chart()
     # plot_all_beta_line_chart()
     # x = np.linspace(0, 1, 10)

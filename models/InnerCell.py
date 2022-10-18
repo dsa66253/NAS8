@@ -6,7 +6,6 @@ class InnerCell(nn.Module):
     #todo make it general def __init__(self, inputChannel, outputChannel, stride, cellArchPerIneerCell, alphas)
     #todo due to adding opIndex parameter, mymodel.py needs to be adjust
     def __init__(self, inputChannel, outputChannel, stride, cellArchPerIneerCell, innercellName, opIndex=[]):
-        
         super(InnerCell, self).__init__()
         self.transArchPerInnerCell= []
         self.cellArchPerIneerCell = cellArchPerIneerCell
@@ -16,9 +15,7 @@ class InnerCell(nn.Module):
         #info trainslate index to key of operations
         for index in range(len(opIndex)):
             if opIndex[index]==1:
-                self.transArchPerInnerCell.append(PRIMITIVES[opIndex[index]])
-
-
+                self.transArchPerInnerCell.append(PRIMITIVES[index])
         #info make operations to a list according cellArchPerIneerCell
         self.opDict = nn.ModuleDict()
         # self.remainOpDict = nn.ModuleDict()

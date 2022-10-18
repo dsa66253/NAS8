@@ -15,9 +15,11 @@ deleteDirList = ["./nasSavedModel",
                 "./accLoss",
                 "./tensorboard_trainNas",
                 "./tensorboard_retrain",
-                "./decode"        
+                "./decode",
+                "./betaLog"       
                 ]
 
 for folder in deleteDirList:
     if os.path.exists(folder):
+        print(folder)
         shutil.rmtree(folder)

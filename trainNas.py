@@ -316,7 +316,7 @@ def myTrain(kth, trainData, train_loader, val_loader, net, model_optimizer, nas_
             testAcc = test.test(net)
             # testAcc = torch.tensor(0)
 
-            record_test_acc = np.append(record_test_acc, testAcc.cpu())
+            record_test_acc = np.append(record_test_acc, testAcc)
             # print(
             #     'Epoch:{}/{} || Epochiter: {}/{} || Iter: {}/{} || train_loss: {:.4f} || val_loss: {:.4f} || train_Accuracy: {:.4f} || val_Accuracy: {:.4f} || LR: {:.8f} || Batchtime: {:.4f} s || '
             #     'ETA: {} '
