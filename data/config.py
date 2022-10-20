@@ -76,7 +76,7 @@ cfg_nasmodel = {
     'clip': False,
     'loc_weight': 1.0,
     'gpu_train': True,
-    'batch_size': 64,
+    'batch_size': 32,
     'start_train_nas_epoch': 4,
     'ngpu': 1,
     'epoch': 45,

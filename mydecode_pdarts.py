@@ -135,10 +135,11 @@ def decodeAllOperation(kth, pickedLayerList=None):
     return toSaveDict
 
 def getCompareLayerList(fileNameList, basedLayerNo):
+    #info get the list of layer from basedLayerNo that needs to be compared 
     compareLayerList = []
     for fileName in fileNameList:
         if "_{}.npy".format(str(basedLayerNo)) in fileName:
-            compareLayerList.append(fileName)
+            compareLayerList.append(fileName) 
     return compareLayerList
 def decodeLayer(compareLayerList):
     finalBetaDict = {}
@@ -156,9 +157,9 @@ def decodeLayer(compareLayerList):
 def decodeAllLayer(kth):
     fileNameList = []
     
-    #info split file according to different kth
+    #info split file according to different kth and filter out betaGrad
     for fileName in sorted(listdir(folder["betaLog"])):
-        if str(kth)+"th" in fileName:
+        if (str(kth)+"th" in fileName) and ("beta." in fileName):
             fileNameList.append(fileName)
     #info back trace
     startFromLayer = 5
@@ -173,6 +174,7 @@ def decodeAllLayer(kth):
         if toLayerNo=="0":
             #info reach First layer
             break
+    
     return pickerLayerList
             
 if __name__ == '__main__': 
