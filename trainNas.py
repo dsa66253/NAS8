@@ -424,10 +424,18 @@ if __name__ == '__main__':
         elif k == 1:
             seed_img = 255
             seed_weight = 278
-        else:
+        elif k==2:
             seed_img = 830
             seed_weight = 953
-        
+        elif k==3:
+            seed_img = 1830
+            seed_weight = 1953
+        elif k==4:
+            seed_img = 2830
+            seed_weight = 2953
+        elif k==5:
+            seed_img = 3830
+            seed_weight = 3953
         accelerateByGpuAlgo(accelerateButUndetermine)
         set_seed_cpu(seed_weight)  # 控制照片批次順序
         

@@ -19,6 +19,7 @@ from feature.make_dir import makeDir
 from feature.utility import  setStdoutToDefault, setStdoutToFile, accelerateByGpuAlgo, get_device
 from feature.random_seed import set_seed_cpu
 import json
+from utility.DatasetHandler import DatasetHandler
 
 stdoutTofile = True
 accelerateButUndetermine = True
@@ -158,7 +159,7 @@ def testCheckPointModel(test_loader, net, kth, epoch):
 
 def test(test_loader, net):
     print("start testing")
-
+    set_seed_cpu(20)
     confusion_matrix_torch = torch.zeros(num_classes, num_classes)
     with torch.no_grad():
         correct = 0
@@ -178,11 +179,12 @@ def test(test_loader, net):
         acc = correct / total
     print('Accuracy of the network on the 1500 test images: %f %%' % (100 * acc))
     return acc.cpu()    
-    
+
+#! the next step print model's weight and bias
 class TestController:
-    def __init__(self, cfg, device):      
+    def __init__(self, cfg, device, seed=20, testDataSetFolder=testDataSetFolder):
         self.cfg = cfg
-        self.testSet = self.prepareData()
+        self.testSet = self.prepareData(seed, testDataSetFolder)
         self.testDataLoader = self.prepareDataLoader(self.testSet)
         self.num_classes = cfg["numOfClasses"]
         self.device = device
@@ -191,6 +193,7 @@ class TestController:
         for k, v in net.named_parameters():
             if v.requires_grad:
                 print (k, v.data.sum())
+            
     def test(self, net):
         confusion_matrix_torch = torch.zeros(self.num_classes, self.num_classes)
         net.eval()
@@ -199,34 +202,35 @@ class TestController:
             total = 0
             for i, data in enumerate(self.testDataLoader):
                 images, labels = data
-
                 labels = labels.to(self.device)
                 images = images.to(self.device)
                 outputs = net(images)
                 _, predict = torch.max(outputs.data, 1)
                 total += labels.size(0)
+                # total = total + 1
+                # print("predict", predict.shape, predict)
+                # print("labels", labels.shape, labels)
                 correct += (predict == labels).sum().item()
                 for t, p in zip(labels.view(-1), predict.view(-1)):
                     confusion_matrix_torch[t.long(), p.long()] += 1
-            acc = correct / total 
+                print("outputs ", outputs)
+                # print("predict", predict)
+                print("labels", labels)
+                # print("total {}, correct {}".format(total, correct))
+            acc = correct / total
+
         net.train()
         return acc * 100
-    def prepareData(self):
-        PATH_test = testDataSetFolder
-        test = Path(PATH_test)
-        print("preparing test dataset ", test)
-        test_transforms = normalize(0, self.cfg["image_size"])
-
-        # choose the training datasets
-        test_data = datasets.ImageFolder(test, transform=test_transforms)
-        
-        return test_data
+    def prepareData(self, seed, testDataSetFolder):
+        datasetHandler = DatasetHandler(testDataSetFolder, cfg, seed)
+        return datasetHandler.getTestDataset()
 
     def prepareDataLoader(self, test_data):
         test_loader = torch.utils.data.DataLoader(test_data, batch_size=self.cfg["batch_size"], num_workers=0, shuffle=False)
         return test_loader
 if __name__ == '__main__':
-    print("main fucntion")
+    # print("main fucntion")
+    torch.set_printoptions(precision=6, sci_mode=False, threshold=1000)
     device = get_device()
     valList = []
     for kth in range(3):
@@ -235,6 +239,7 @@ if __name__ == '__main__':
             trainLogDir = "./log"
             makeDir(trainLogDir)
             f = setStdoutToFile(trainLogDir+"/test_{}.txt".format(str(kth)))
+        
         args = parse_args(str(kth))
         # makeDir(args.save_folder, args.log_dir)
         cfg = None
@@ -284,11 +289,12 @@ if __name__ == '__main__':
         
         #info test final model
         net = prepareModel(num_classes, kth)
-        # printNetWeight(net)
+        
         last_epoch_val_acc = testC.test(net)
-        # last_epoch_val_acc = test(testDataLoader, net)
+        # testC.printAllModule(net)
+        # exit()
         valList.append(last_epoch_val_acc)
-        print('retrain validate accuracy:')
+        print('test validate accuracy:')
         print(valList)
         
         if stdoutTofile:

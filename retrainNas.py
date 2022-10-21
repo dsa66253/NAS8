@@ -72,7 +72,7 @@ def saveAccLoss(kth, lossRecord, accRecord):
 def prepareDataSet():
     #info prepare dataset
     datasetHandler = DatasetHandler(trainDataSetFolder, cfg, seed_img)
-    datasetHandler.addAugmentDataset(transforms.RandomHorizontalFlip(p=1))
+    # datasetHandler.addAugmentDataset(transforms.RandomHorizontalFlip(p=1))
     # datasetHandler.addAugmentDataset(transforms.RandomRotation(degrees=10))
     print("training dataset set size:", len(datasetHandler.getTrainDataset()))
     print("val dataset set size:", len(datasetHandler.getValDataset()))
@@ -290,14 +290,14 @@ def myTrain(kth, trainData, trainDataLoader, valDataLoader, net, model_optimizer
             # writer.add_scalar('val_Acc/k='+str(kth), valAcc, epoch)
             last_epoch_val_acc = 100 * correct_images_val / total_images_val
         # exit()
-        # if iteration>=5:
+        # if iteration>=500:
         #     break
 
     lossRecord = {"train": record_train_loss, "val": record_val_loss}
-    accRecord = {"train": record_train_acc, "val": record_val_acc, "test":record_test_acc}
+    accRecord = {"train": record_train_acc, "val": record_val_acc, "test": record_test_acc}
     print("start test model before save model")
     testAcc = testC.test(net)
-    testC.printAllModule(net)
+    # testC.printAllModule(net)
     torch.save(net.state_dict(), os.path.join(folder["retrainSavedModel"], cfg['name'] + str(kth) + '_Final.pt'))
     return last_epoch_val_acc, lossRecord, accRecord
 
@@ -322,9 +322,18 @@ if __name__ == '__main__':
         elif k == 1:
             seed_img = 255
             seed_weight = 278
-        else:
+        elif k==2:
             seed_img = 830
             seed_weight = 953
+        elif k==3:
+            seed_img = 1830
+            seed_weight = 1953
+        elif k==4:
+            seed_img = 2830
+            seed_weight = 2953
+        elif k==5:
+            seed_img = 3830
+            seed_weight = 3953
             
         args = parse_args(str(k))
         cfg = None
@@ -364,6 +373,7 @@ if __name__ == '__main__':
         model_optimizer = prepareOpt(net)
         
         last_epoch_val_ac, lossRecord, accRecord = myTrain(k, trainData, trainDataLoader, valDataLoader, net, model_optimizer, criterion, writer=None)  # 進入model訓練
+        # exit()
         histDrawer.drawNetConvWeight(net, tag="trained_{}".format(str(k)))
         #info record training processs
         alMonitor = AccLossMonitor(k, folder["pltSavedDir"], folder["accLossDir"], trainType="retrain")
@@ -371,7 +381,7 @@ if __name__ == '__main__':
         alMonitor.plotLossLineChart(lossRecord)
         alMonitor.saveAccLossNp(accRecord, lossRecord)
 
-        valList.append(last_epoch_val_ac)
+        valList.append(last_epoch_val_ac.data)
         print('retrain validate accuracy:')
         print(valList)
         # writer.close()
